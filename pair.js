@@ -1,6 +1,6 @@
 const express = require("express");
 const fs = require("fs");
-const { exec } = require("child_process");
+const { exec } = require("child-process-ext");
 const pino = require("pino");
 const qrcode = require("qrcode"); // Import the qrcode library
 const {
