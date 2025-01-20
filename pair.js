@@ -1,8 +1,8 @@
 const express = require("express");
 const fs = require("fs");
 const { exec } = require("child_process");
-let router = express.Router();
 const pino = require("pino");
+const qrcode = require("qrcode"); // Import the qrcode library
 const {
   default: makeWASocket,
   useMultiFileAuthState,
@@ -13,6 +13,8 @@ const {
 } = require("@whiskeysockets/baileys");
 const { upload } = require("./mega");
 
+let router = express.Router();
+
 function removeFile(FilePath) {
   if (!fs.existsSync(FilePath)) return false;
   fs.rmSync(FilePath, { recursive: true, force: true });
@@ -20,8 +22,10 @@ function removeFile(FilePath) {
 
 router.get("/", async (req, res) => {
   let num = req.query.number;
+
   async function RobinPair() {
     const { state, saveCreds } = await useMultiFileAuthState(`./session`);
+
     try {
       let RobinPairWeb = makeWASocket({
         auth: {
@@ -40,9 +44,17 @@ router.get("/", async (req, res) => {
         await delay(1500);
         num = num.replace(/[^0-9]/g, "");
         const code = await RobinPairWeb.requestPairingCode(num);
-        if (!res.headersSent) {
-          await res.send({ code });
-        }
+
+        // Generate the QR code here
+        qrcode.toDataURL(code, (err, qrCodeDataURL) => {
+          if (err) {
+            console.error("Error generating QR code:", err);
+            return res.status(500).send("Error generating QR code.");
+          }
+
+          // Send the QR code to the client
+          res.send({ qrCode: qrCodeDataURL });
+        });
       }
 
       RobinPairWeb.ev.on("creds.update", saveCreds);
@@ -82,17 +94,16 @@ router.get("/", async (req, res) => {
             );
 
             const sid = `ROBIN MAX YT BOT PAIR\n\nWeb pair msg`;
-            const mg = `🛑 *Do not share this code to anyone* 🛑\n\n> ROBIN MAX`
+            const mg = `🛑 *Do not share this code to anyone* 🛑\n\n> ROBIN MAX`;
+
             await RobinPairWeb.sendMessage(user_jid, {
               image: {
                 url: "https://raw.githubusercontent.com/ROBIN-MAX-YT/BOT-HELPER/refs/heads/main/Flux_Dev_a_surreal_and_vibrant_cinematic_photo_of_Create_an_ac_2.jpeg",
               },
               caption: sid,
             });
-            const msg = await RobinPairWeb.sendMessage(user_jid, {
-              text: string_session,
-            });
-            const msg1 = await RobinPairWeb.sendMessage(user_jid, { text: mg });
+            await RobinPairWeb.sendMessage(user_jid, { text: string_session });
+            await RobinPairWeb.sendMessage(user_jid, { text: mg });
           } catch (e) {
             exec("pm2 restart prabath");
           }
@@ -120,6 +131,7 @@ router.get("/", async (req, res) => {
       }
     }
   }
+
   return await RobinPair();
 });
 
